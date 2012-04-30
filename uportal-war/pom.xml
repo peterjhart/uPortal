@@ -656,17 +656,10 @@
                     </excludes>
                 </configuration>
             </plugin>
-            <plugin>
-                <artifactId>maven-war-plugin</artifactId>
-                <configuration>
-                    <filteringDeploymentDescriptors>true</filteringDeploymentDescriptors>
-                    <filters>
-                        <filter>${basedir}/../${filters.file}</filter>
-                    </filters>
-                    <attachClasses>true</attachClasses>
-                    <webXml>${war-plugin-webxml-source}</webXml>
-                </configuration>
-            </plugin>
+            <!--
+             | Note that for the next set of plugins that all bind to the prepare-package phase
+             | ORDER IS VERY IMPORTANT
+             +-->
             <plugin>
                 <groupId>org.apache.portals.pluto</groupId>
                 <artifactId>maven-pluto-plugin</artifactId>
@@ -680,12 +673,50 @@
                 </executions>
             </plugin>
             <plugin>
+                <artifactId>maven-war-plugin</artifactId>
+                <executions>
+                    <!--
+                     | war plugin execution split into two steps, the first copies the src/main/webapp resources
+                     | into the build directory during prepare-package so they can be worked on by later plugins
+                     | before the WAR is actually packaged up
+                     +-->
+                    <execution>
+                        <id>build-directory-tree</id>
+                        <phase>prepare-package</phase>
+                        <goals>
+                            <goal>exploded</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>build-war</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>war</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <filteringDeploymentDescriptors>true</filteringDeploymentDescriptors>
+                    <filters>
+                        <filter>${basedir}/../${filters.file}</filter>
+                    </filters>
+                    <attachClasses>true</attachClasses>
+                    <webXml>${war-plugin-webxml-source}</webXml>
+                </configuration>
+            </plugin>
+            <plugin>
                 <groupId>org.jasig.maven</groupId>
                 <artifactId>sass-maven-plugin</artifactId>
                 <version>1.0.0-SNAPSHOT</version>
-                <configuration>
-                    <baseOutputDirectory>${basedir}/src/main/webapp</baseOutputDirectory>
-                </configuration>
+                <executions>
+                    <execution>
+                        <id>generate-css-from-scss</id>
+                        <phase>prepare-package</phase>
+                        <goals>
+                            <goal>update-stylesheets</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
             <plugin>
                 <groupId>org.jasig.resourceserver</groupId>
@@ -701,8 +732,10 @@
                         <inherited>false</inherited>
                         <configuration>
                             <displayJsWarnings>false</displayJsWarnings>
+                            <skinSourceDirectory>${project.build.directory}/${project.build.finalName}/media/skins/universality</skinSourceDirectory>
+                            <baseOutputDirectory>${project.build.directory}/${project.build.finalName}/media/skins/universality</baseOutputDirectory>
                             <includes>
-                                <include>media/skins/universality/**/skin.xml</include>
+                                <include>**/skin.xml</include>
                             </includes>
                             <sharedJavaScriptDirectory>media/skins/universality/common/javascript</sharedJavaScriptDirectory>
                         </configuration>
@@ -716,8 +749,10 @@
                         <inherited>false</inherited>
                         <configuration>
                             <displayJsWarnings>false</displayJsWarnings>
+                            <skinSourceDirectory>${project.build.directory}/${project.build.finalName}/media/skins/muniversality</skinSourceDirectory>
+                            <baseOutputDirectory>${project.build.directory}/${project.build.finalName}/media/skins/muniversality</baseOutputDirectory>
                             <includes>
-                                <include>media/skins/muniversality/**/skin.xml</include>
+                                <include>**/skin.xml</include>
                             </includes>
                             <sharedJavaScriptDirectory>media/skins/muniversality/common/javascript</sharedJavaScriptDirectory>
                         </configuration>
